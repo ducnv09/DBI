@@ -1,0 +1,7 @@
+/*CREATE DATABASE ExDB
+DROP DATABASE DucDB*/
+
+
+
+
+
