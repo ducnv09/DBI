@@ -1,0 +1,118 @@
+--Q1
+USE DE9
+CREATE DATABASE DE9
+CREATE TABLE LOCATIONS(
+LOCATIONID VARCHAR(20) PRIMARY KEY,
+NAME NVARCHAR(100),
+ADDRESS NVARCHAR(255)
+)
+CREATE TABLE EVENTS(
+EVENTID INT PRIMARY KEY,
+NAME NVARCHAR(255),
+STARTTIME DATETIME,
+ENDTIME DATETIME,
+LOCATIONID VARCHAR(20),
+FOREIGN KEY (LOCATIONID) REFERENCES LOCATIONS(LOCATIONID)
+)
+CREATE TABLE STAFFS(
+STAFFID INT PRIMARY KEY,
+NAME NVARCHAR(255),
+PHONE VARCHAR(15)
+)
+CREATE TABLE WORKFOR(
+ROLE NVARCHAR(30),
+STAFFID INT REFERENCES STAFFS(STAFFID),
+EVENTID INT REFERENCES EVENTS(EVENTID),
+PRIMARY KEY(STAFFID,EVENTID,ROLE)
+)
+use PE_DBI202_Su2021		
+--Q2
+select *
+from products
+where products.category_name='Cyclocross bicycles'
+--Q3
+select products.product_name,products.model_year,
+products.list_price,products.brand_name
+from products
+where products.brand_name='trek' and 
+model_year=2018 and list_price > 3000
+order by list_price
+--Q4
+select order_id,order_date,customers.customer_id,first_name,last_name,
+stores.store_name
+from orders
+inner join customers on orders.customer_id=customers.customer_id
+inner join stores on orders.store_id=stores.store_id
+where order_date between '2016-01-01' and '2016-01-31'
+and store_name ='santa cruz bikes'
+--Q5
+select stores.store_id,stores.store_name,
+count(orders.order_id) as NumberOfOrdersIn2018
+from stores
+inner join orders on stores.store_id=orders.store_id
+where year(order_date)=2018
+group by stores.store_id,stores.store_name
+order by NumberOfOrdersIn2018 desc
+--Q6
+select products.product_id,product_name,model_year,
+sum(quantity) as TotalStockQuantity
+from products
+left join stocks on products.product_id=stocks.product_id
+group by products.product_id,product_name,model_year
+having sum(quantity)  >= all
+(
+select sum(quantity) 
+from products
+left join stocks on products.product_id=stocks.product_id
+group by products.product_id
+)
+--Q7
+select * from(
+select stores.store_name,orders.staff_id,staffs.first_name,staffs.last_name,
+count(stores.store_name) as NumberOfOrders
+from orders
+inner join staffs on orders.staff_id=staffs.staff_id
+inner join stores on orders.store_id=stores.store_id
+group by stores.store_name,orders.staff_id,staffs.first_name,staffs.last_name
+having count(stores.store_name) in
+(select max(a.NumberOfOrders) from
+(select stores.store_name, count(*) as NumberOfOrders  from orders, stores
+where orders.store_id = stores.store_id
+group by stores.store_name, orders.staff_id) as a
+group by a.store_name)) as c
+order by c.store_name ASC
+--Q8
+create procedure pr1
+@store_id int,
+@numberOfStaffs int output
+as
+begin
+set @numberOfStaffs = 
+( select count(staff_id) as NumberOfStaffs
+from staffs
+where store_id = @store_id)
+end
+
+declare @x int
+exec pr1 3 , @x output
+select @x as NumberOfStaffs
+--Q9
+CREATE TRIGGER TR2
+ON STOCKS
+AFTER DELETE
+AS BEGIN
+SELECT A.PRODUCT_ID,products.product_name,A.store_id,
+STORES.store_name,A.quantity
+FROM DELETED AS A
+INNER JOIN products ON A.product_id=products.product_id
+INNER JOIN stores ON A.store_id=stores.store_id
+END
+--Q10
+update stocks
+set quantity=30
+where exists
+(
+select * from products
+where products.category_name='cruisers bicycles' and store_id=1
+and products.product_id=stocks.product_id
+)

@@ -1,0 +1,116 @@
+--Q1
+use de6	
+create database de6
+CREATE TABLE Employee (
+    EmpId INT PRIMARY KEY,
+    name NVARCHAR(50),
+    salary MONEY
+);
+
+CREATE TABLE Manager(
+	EmpId INT PRIMARY KEY,
+	bonus MONEY,
+	FOREIGN KEY (EmpId) REFERENCES Employee(EmpId),
+
+	)
+
+	CREATE TABLE Projects1 (
+    ProjectId INT PRIMARY KEY,
+    name NVARCHAR(200),
+	EmpId INT,
+	FOREIGN KEY (EmpId) REFERENCES Manager(EmpId)
+);
+
+CREATE TABLE Works1 (
+    ProjectId INT,
+    EmpId INT,
+	hours int,
+    FOREIGN KEY (ProjectId) REFERENCES Projects1(ProjectId),
+    FOREIGN KEY (EmpId) REFERENCES Employee(EmpId),
+	primary key (ProjectId,EmpId)
+);
+use [PE_DBI202_F2021]
+--Q2
+select *
+from location
+where CostRate > 0
+--Q3
+select ProductID,Price,StartDate,EndDate from ProductPriceHistory
+where year(EndDate)=2003
+and price < 100
+order by price desc
+--Q4
+select Product.ProductID,Product.Name,
+Product.Color,Product.SubcategoryID,
+ProductSubcategory.Name as SubcategoryName,ProductSubcategory.Category, ProductCostHistory.StartDate,
+ProductCostHistory.EndDate,ProductCostHistory.Cost from Product
+left join ProductCostHistory on Product.ProductID=ProductCostHistory.ProductID
+left join ProductSubcategory on Product.SubcategoryID=ProductSubcategory.SubcategoryID
+where color = 'black' and Product.Name like 'hl%'
+--Q5
+select Location.LocationID,Location.Name, count(Product.ProductID) as NumberOfProducts
+from Location
+inner join ProductInventory on location.LocationID=ProductInventory.LocationID
+inner join Product on ProductInventory.ProductID=Product.ProductID
+group by Location.LocationID,Location.Name
+order by NumberOfProducts desc, Location.Name
+--Q7
+SELECT final12.ModelID, ProductModel.Name, Product.ProductID, Product.Name, NumberOfLocations FROM
+(SELECT B.ModelID, ProductID, NumberOfLocations FROM
+(select ModelID, max(NumberOfLocations) as tu from
+(select ProductModel.ModelID, product.ProductID,
+count(locationid) as NumberOfLocations
+from ProductModel
+left join product on ProductModel.ModelID=product.ModelID
+left join ProductInventory on Product.ProductID=ProductInventory.ProductID
+where ProductModel.Name like 'HL Mountain%'
+group by ProductModel.ModelID, product.ProductID) as A
+group by ModelID) as B
+
+left join
+
+(select ProductModel.ModelID,product.ProductID,
+count(locationid) as NumberOfLocations
+from ProductModel
+left join product on ProductModel.ModelID=product.ModelID
+left join ProductInventory on Product.ProductID=ProductInventory.ProductID
+where ProductModel.Name like 'HL Mountain%'
+group by ProductModel.ModelID,product.ProductID) as Cuong
+ON b.ModelID = cuong.ModelID and b.tu = cuong.NumberOfLocations)
+as final12
+left join ProductModel
+On final12.ModelID = ProductModel.ModelID
+left join Product
+On final12.ProductID = Product.ProductID
+--Q8
+create procedure proc_product_subcategory
+@subcategoryID int,
+@numberOfProduct int output
+as
+begin
+set @numberOfProduct  =
+(select count(ProductID) as NumberOfProducts
+from Product
+where SubcategoryID = @subcategoryID)
+end
+
+declare @x int
+exec proc_product_subcategory 1,@x output
+select @x as NumberOfProducts
+--Q9
+CREATE TRIGGER TR_DELETE_PRODUCTINVENTORY_LOCATION
+ON PRODUCTINVENTORY
+AFTER DELETE
+AS 
+BEGIN
+SELECT A.ProductID,A.LocationID,Location.Name,A.Shelf,
+A.Bin,A.Quantity
+FROM deleted AS A
+INNER JOIN Location ON A.LocationID=Location.LocationID
+END
+--Q10
+UPDATE ProductInventory
+SET Quantity = 2000
+WHERE EXISTS(
+SELECT * FROM Product
+WHERE ModelID=33 AND PRODUCT.ProductID = ProductInventory.ProductID)

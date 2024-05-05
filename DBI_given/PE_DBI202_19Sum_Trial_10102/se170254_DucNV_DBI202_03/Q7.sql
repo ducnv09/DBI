@@ -1,0 +1,14 @@
+SELECT *
+FROM (
+	SELECT TOP 5 * 
+	FROM Product AS P
+	ORDER BY P.UnitPrice DESC
+	) AS TABLE1
+unION
+SELECT *
+FROM (
+	SELECT TOP 5 * 
+	FROM Product AS P
+	ORDER BY P.UnitPrice ASC
+	) AS TABLE2
+ORDER BY UnitPrice DESC

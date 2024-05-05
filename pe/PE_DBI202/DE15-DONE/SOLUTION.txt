@@ -1,0 +1,86 @@
+--Q2
+SELECT invid,invdate,customer,employeeid
+FROM tblInvoices
+WHERE employeeid='S002'
+--Q3
+SELECT proid,proname,supname
+FROM tblProducts
+INNER JOIN tblSuppliers ON tblProducts.supcode=tblSuppliers.supcode
+WHERE supname = N'HOÀN VŨ'
+--Q4
+SELECT proname,SUM(QUANTITY) AS 'TOTAL QUANTITY'
+FROM tblProducts
+INNER JOIN tblInv_Detail ON tblProducts.proid=tblInv_Detail.proid
+WHERE proname =N'Router Wifi Chuẩn Wifi 6 AX5400 TP-Link Archer AX73'
+GROUP BY proname
+--Q5
+SELECT employeeid,COUNT(invid) AS 'Total Number'
+FROM tblInvoices
+GROUP BY employeeid
+--Q6
+SELECT tblInvoices.invid,SUM(PRICE*QUANTITY) AS
+'TOTAL AMOUNT'
+FROM tblInvoices
+INNER JOIN tblInv_Detail ON tblInvoices.invid=tblInv_Detail.invid
+GROUP BY tblInvoices.invid
+HAVING SUM(PRICE*QUANTITY) >= ALL
+(
+SELECT SUM(PRICE*QUANTITY) 
+FROM tblInvoices
+INNER JOIN tblInv_Detail ON tblInvoices.invid=tblInv_Detail.invid
+GROUP BY tblInvoices.invid
+)
+--Q7
+SELECT tblInvoices.invid,tblInvoices.invdate,tblInv_Detail.proid,
+tblInv_Detail.quantity,tblInv_Detail.price
+FROM tblInvoices
+INNER JOIN tblInv_Detail ON tblInvoices.invid=tblInv_Detail.invid
+WHERE employeeid='S003'
+--Q8
+drop PROCEDURE PROCPRODUCNUMBER
+CREATE PROCEDURE PROCPRODUCNUMBER
+@SUPCODE nvarchar(100),
+@TOTALNUMBEROFPRODUCTS INT OUTPUT
+AS
+BEGIN
+SELECT COUNT(proid)
+FROM tblProducts
+WHERE tblProducts.supcode=@SUPCODE
+END
+
+DECLARE @PRODUCNUMBER INT
+EXEC PROCPRODUCNUMBER 'MT',@PRODUCNUMBER output
+select @PRODUCNUMBER
+--Q9
+CREATE TRIGGER tr_PrintTotalAmount
+ON tblInv_Detail
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @invid nchar(6);
+    DECLARE @totalAmount int;
+
+    -- Get the invid of the inserted line
+    SELECT @invid = invid
+    FROM inserted;
+
+    -- Calculate the total amount for the specific invid
+    SELECT @totalAmount = SUM(quantity * price)
+    FROM tblInv_Detail
+    WHERE invid = @invid
+    GROUP BY invid;
+END;
+
+
+insert into tblInv_Detail
+values('000003','RTPL02',1,10000000)
+--Q10
+DELETE FROM tblInvoices
+WHERE invid IN(
+SELECT invid
+FROM tblInvoices
+WHERE customer = N'LÊ MINH PHƯƠNG'
+)
+SELECT * FROM tblInvoices

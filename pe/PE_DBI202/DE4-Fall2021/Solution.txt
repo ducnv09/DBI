@@ -1,0 +1,128 @@
+--Q1
+create database tests
+create table departments(
+deptid varchar(20) primary key,
+name nvarchar(200),
+office nvarchar(100)
+)
+create table employeess(
+empcode varchar(20) primary key,
+name nvarchar(50),
+birthdate date,
+deptid varchar(20),
+foreign key (deptid) references departments(deptid)
+)
+create table dependants(
+number int,
+name nvarchar(50),
+birthdate date,
+role nvarchar(30),
+empcode varchar(20),
+foreign key (empcode) references employeess(empcode),
+primary key (empcode,number)
+)
+
+--Q2
+select *
+from ProductSubcategory
+where Category = 'accessories'
+--Q3
+select ProductID,name,color,cost,price,SellEndDate
+from Product
+where cost < 100 and SellEndDate is not null
+order by cost
+--Q4
+select ProductID,product.name,price,ProductModel.Name,
+ProductSubcategory.Name,ProductSubcategory.Category
+from Product
+left join ProductModel on Product.ModelID=ProductModel.ModelID
+left join ProductSubcategory on Product.SubcategoryID=ProductSubcategory.SubcategoryID
+where price < 100 and color='black'
+--Q5
+select ProductSubcategory.SubcategoryID,ProductSubcategory.name,Category,
+count(ProductID) as NumberOfProducts
+from ProductSubcategory
+inner join Product on ProductSubcategory.SubcategoryID=Product.SubcategoryID
+group by ProductSubcategory.SubcategoryID,ProductSubcategory.name,Category
+order by Category,  NumberOfProducts desc,ProductSubcategory.name
+--Q6
+select Location.LocationID,Location.Name,count(Product.ProductID) as NumberOfProducts
+from Location
+inner join ProductInventory on Location.LocationID=ProductInventory.LocationID
+inner join Product on ProductInventory.ProductID=Product.ProductID
+group by Location.LocationID,Location.Name
+having count(Product.ProductID) <=all
+  (
+	select count(Product.ProductID)
+	from Location
+	inner join ProductInventory on Location.LocationID=ProductInventory.LocationID
+	inner join Product on ProductInventory.ProductID=Product.ProductID
+	group by Location.LocationID,Location.Name
+  )
+--Q7
+ WITH TempCount AS
+(
+	SELECT s.Category, s.Name AS SubCategoryName, COUNT(DISTINCT p.ProductID) AS NumberOfProducts FROM ProductSubcategory s
+	JOIN Product p
+	ON s.SubcategoryID = p.SubcategoryID
+	GROUP BY s.Category, s.Name
+)
+,TempMax AS
+(
+	SELECT Category, MAX(NumberOfProducts) AS NumberOfProducts FROM TempCount
+	GROUP BY Category
+)
+SELECT t.* FROM TempCount t
+JOIN TempMax m
+ON t.Category = m.Category AND t.NumberOfProducts = m.NumberOfProducts
+ORDER BY NumberOfProducts DESC
+
+
+
+SELECT a4.Category, a5.SubcategoryName,a4.NumberOfProducts
+FROM (
+    SELECT a1.Category, MAX(a1.NumberOfProducts) AS NumberOfProducts
+    FROM (
+        SELECT ps.Category, ps.Name AS SubcategoryName, COUNT(p.ProductID) AS NumberOfProducts
+        FROM ProductSubcategory ps
+        INNER JOIN Product p ON ps.SubcategoryID = p.SubcategoryID
+        GROUP BY ps.Category, ps.Name
+    ) AS a1
+    GROUP BY a1.Category
+) AS a4
+inner JOIN (
+     SELECT a1.Category,a1.SubcategoryName ,MAX(a1.NumberOfProducts) AS NumberOfProducts
+    FROM (
+        SELECT ps.Category, ps.Name AS SubcategoryName, COUNT(p.ProductID) AS NumberOfProducts
+        FROM ProductSubcategory ps
+        INNER JOIN Product p ON ps.SubcategoryID = p.SubcategoryID
+        GROUP BY ps.Category, ps.Name
+    ) AS a1
+    GROUP BY a1.Category,a1.SubcategoryName) as a5
+	on a4.Category=a5.Category and a4.NumberOfProducts=a5.NumberOfProducts
+	order by a4.NumberOfProducts desc
+--Q8
+create procedure proc_product_model
+@moderlID int,
+@numberOfProducts int output
+as
+begin
+set @numberOfProducts=
+(select count(ProductID) as NumberOfProducts
+from Product
+where ModelID = @moderlID)
+end
+--Q9
+CREATE TRIGGER TR_INSERT_PRODUCT_SUBCATEGORY
+ON PRODUCT
+AFTER INSERT
+AS BEGIN
+SELECT  A.ProductID,A.Name,A.SubcategoryID,ProductSubcategory.Name,ProductSubcategory.Category
+FROM inserted AS A
+INNER JOIN ProductSubcategory ON A.SubcategoryID=ProductSubcategory.SubcategoryID
+END
+--Q10
+DELETE FROM ProductInventory
+WHERE EXISTS(
+SELECT * FROM Product
+WHERE ModelID=33 AND PRODUCT.ProductID = ProductInventory.ProductID)

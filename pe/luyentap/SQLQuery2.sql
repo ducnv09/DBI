@@ -1,0 +1,2 @@
+SELECT*FROM Cars 
+WHERE Color='RED'

@@ -1,0 +1,71 @@
+USE SALEMNG
+--Q2
+SELECT *
+FROM tblInvoices
+WHERE INVDATE < '2022-08-10'
+--Q3
+SELECT invid,tblProducts.proid,quantity,price,
+price*quantity as amount
+FROM tblProducts
+inner join tblInv_Detail 
+on tblProducts.proid=tblInv_Detail.proid
+where invid='000001'
+--Q4
+SELECT tblInvoices.INVID,invdate,sum(PRICE*QUANTITY)
+AS 'Total amount'
+FROM tblInvoices
+INNER JOIN tblInv_Detail ON tblInvoices.invid=tblInv_Detail.invid
+INNER JOIN tblProducts ON tblInv_Detail.proid=tblProducts.proid
+group by tblInvoices.INVID,invdate
+order by invdate desc
+--Q5
+SELECT PROID,PRONAME
+FROM tblProducts
+WHERE PROID NOT IN
+(SELECT DISTINCT tblProducts.proid
+FROM tblProducts
+inner join tblInv_Detail 
+on tblProducts.proid=tblInv_Detail.proid
+INNER JOIN tblInvoices
+ON tblInv_Detail.invid=tblInvoices.invid)
+--Q6
+SELECT tblProducts.proname,
+sum(price*quantity) as 'Total amount'
+FROM tblProducts
+inner join tblInv_Detail 
+on tblProducts.proid=tblInv_Detail.proid
+group by tblProducts.proname
+having sum(price*quantity) >=all(
+SELECT sum(price*quantity)
+FROM tblProducts
+inner join tblInv_Detail 
+on tblProducts.proid=tblInv_Detail.proid
+group by tblProducts.proname
+)
+--Q7
+SELECT tblProducts.proid, tblProducts.proname
+FROM tblProducts
+INNER JOIN tblSuppliers
+ON tblProducts.supcode=tblSuppliers.supcode
+WHERE tblSuppliers.supname=N'Minh Thông'
+--Q8
+CREATE PROCEDURE ProcTotalAmount
+@dataempid nvarchar(20),
+@Totalamount int output
+as
+begin
+set @Totalamount=(
+select sum(quantity*price)
+from tblInv_Detail 
+INNER JOIN tblInvoices
+ON tblInv_Detail.invid=tblInvoices.invid
+where employeeid=@dataempid)
+end
+
+declare @totalamount int
+exec ProcTotalAmount 'S002', @Totalamount OUTPUT
+SELECT @Totalamount
+--Q10
+UPDATE tblSuppliers
+SET phone =0937892444
+WHERE tblSuppliers.supname=N'Minh Thông'

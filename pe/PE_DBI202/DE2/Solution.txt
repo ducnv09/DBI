@@ -1,0 +1,25 @@
+--Q1
+create database b3
+create table departments(
+departmentID int primary key,
+name nvarchar(100)
+)
+create table employees(
+employeeid varchar(10) primary key,
+name nvarchar(100),
+dob date
+)
+create table projects(
+projectid int primary key,
+title nvarchar(265)
+)
+create table participate(
+hours int,
+employeeid varchar(10) ,
+projectid int,
+departmentid int,
+FOREIGN KEY (employeeid) REFERENCES employees(employeeid),
+FOREIGN KEY (projectid) REFERENCES projects(projectid),
+FOREIGN KEY (departmentID) REFERENCES  departments(departmentID),
+primary key(projectid,employeeid)
+)

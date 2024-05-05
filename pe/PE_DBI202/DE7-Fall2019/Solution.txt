@@ -1,0 +1,111 @@
+--Q1
+use de7
+CREATE DATABASE DE7
+CREATE TABLE DEPARTMENTS(
+DEPTID VARCHAR(15) PRIMARY KEY,
+NAME NVARCHAR(60)
+)
+
+CREATE TABLE OFFICES(
+OFFICENUMBER INT PRIMARY KEY,
+ADDRESS NVARCHAR(30),
+PHONE VARCHAR(15),
+DEPTID VARCHAR(15),
+FOREIGN KEY (DEPTID) REFERENCES DEPARTMENTS (DEPTID)
+)
+CREATE TABLE EMPLOYEES(
+EMPLOYEEID INT PRIMARY KEY,
+FULLNAME NVARCHAR(50),
+OFFICENUMBER INT,
+FOREIGN KEY (OFFICENUMBER) REFERENCES OFFICES (OFFICENUMBER)
+)
+CREATE TABLE WORKFOR(
+Fromm DATE ,
+SALARY FLOAT,
+TOo DATE,
+DEPTID VARCHAR(15),
+EMPLOYEEID INT ,
+FOREIGN KEY (DEPTID) REFERENCES DEPARTMENTS (DEPTID),
+FOREIGN KEY (EMPLOYEEID) REFERENCES EMPLOYEES (EMPLOYEEID),
+PRIMARY KEY(EMPLOYEEID,DEPTID,FROMM)
+)
+--Q2
+select *
+from Locations
+where Locations.CountryID='US' or
+Locations.CountryID='CA'
+--Q3
+select EmployeeID,FirstName,LastName,
+Salary,Commission_pct,HireDate
+from Employees
+where Salary between 4000 and 10000
+and Commission_pct > 0 
+and FirstName like '%e%'
+order by HireDate desc
+--Q4
+select EmployeeID,FirstName,LastName,HireDate,
+jobs.JobID,JobTitle,Departments.DepartmentID,DepartmentName
+from Employees
+inner join jobs on Employees.JobID=Jobs.JobID
+inner join Departments on Employees.DepartmentID=Departments.DepartmentID
+where year(HireDate)=2005 and
+JobTitle = 'stock clerk'
+--Q5
+select jobs.JobID,JobTitle, count(Employees.EmployeeID)
+as NumberOfEmployees
+from Jobs
+inner join Employees on jobs.JobID=Employees.JobID
+group by jobs.JobID,JobTitle
+order by NumberOfEmployees desc
+--Q6
+SELECT Countries.CountryID, Countries.CountryName, Countries.RegionID 
+FROM Countries
+left JOIN Locations ON Countries.CountryID = Locations.CountryID
+LEFT JOIN Departments ON Locations.LocationID = Departments.LocationID
+GROUP BY Countries.CountryID, Countries.CountryName, Countries.RegionID 
+HAVING COUNT(Departments.DepartmentID) = 0;
+--Q7
+SELECT emps1.EmployeeID,
+COUNT(emps2.EmployeeID) as NumberOfSubodinates FROM (
+SELECT EmployeeID  FROM Employees ts
+WHERE Salary > 10000 OR EXISTS (
+        SELECT 1
+        FROM Employees e3
+        WHERE e3.ManagerID = ts.EmployeeID
+    )) as emps1 
+left join
+Employees mngs on emps1.EmployeeID = mngs.ManagerID
+left join 
+Employees emps2 ON mngs.ManagerID = emps2.EmployeeID
+GROUP BY  emps1.EmployeeID, mngs.ManagerID
+--Q8
+create procedure proc4
+@fromDate date,
+@toDate date,
+@numberOfEmployees int output
+as
+begin
+set @numberOfEmployees = 
+(select count(Employees.EmployeeID)
+from Employees
+where HireDate between @fromDate and  @toDate)
+end
+declare @x int
+exec proc4 '2002-01-01','2002-12-31', @x output
+select @x as NumberOfEmployees
+--Q9
+CREATE TRIGGER TR22
+ON DEPARTMENTS
+AFTER UPDATE
+AS
+BEGIN
+SELECT A.DepartmentID,A.DepartmentName,B.ManagerID AS OLDMANAGER,A.ManagerID
+AS NEWMANAGER FROM inserted AS A
+INNER JOIN deleted AS B
+ON A.DepartmentID=B.DepartmentID
+END
+--Q10
+delete from Locations
+where LocationID IN
+(select LocationID from Locations where LocationID not in 
+(select LocationID from Departments))

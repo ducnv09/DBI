@@ -1,0 +1,150 @@
+--Q1
+USE DE12
+CREATE DATABASE DE12
+CREATE TABLE ROUTES(
+STARTTIME TIME,
+ENDTIME TIME,
+ROUTENUMBER INT PRIMARY KEY
+)
+CREATE TABLE BUSES(
+TOTALSEATS INT,
+COMPANY NVARCHAR(100),
+BUSNUMBER VARCHAR(15) PRIMARY KEY,
+ROUTENUMBER INT REFERENCES ROUTES(ROUTENUMBER)
+)
+CREATE TABLE STATIONS(
+ADDRESS NVARCHAR(100),
+STATIONNAME NVARCHAR(50) PRIMARY KEY
+)
+CREATE TABLE HAS(
+STATIONNAME NVARCHAR(50) REFERENCES STATIONS(STATIONNAME),
+ROUTENUMBER INT REFERENCES ROUTES(ROUTENUMBER),
+STATIONNUMBER INT,
+PRIMARY KEY (STATIONNAME,ROUTENUMBER,STATIONNUMBER)
+)
+USE PE_DBI202_Su2022_B5
+--Q2
+SELECT employees.employeeNumber,employees.lastName,
+employees.firstName,employees.email,employees.jobTitle
+FROM employees
+WHERE employees.jobTitle='SALES REP'
+--Q3
+SELECT employeeNumber,firstName+' '+lastName AS 
+employeeFullname,jobTitle,offices.officeCode,offices.city,
+offices.state,offices.country
+FROM employees
+inner join offices on employees.officeCode=offices.officeCode
+where offices.country = 'france' or offices.country='usa'
+order by offices.country, offices.city,
+employeeNumber
+--Q4
+
+SELECT DISTINCT customers.customerNumber, customerName,CITY,STATE,COUNTRY
+FROM customers
+INNER JOIN orders ON customers.customerNumber=ORDERS.customerNumber
+INNER JOIN orderdetails ON ORDERS.orderNumber=orderdetails.orderNumber
+INNER JOIN products ON orderdetails.productCode=products.productCode
+WHERE products.productLine ='CLASSIC CARS'
+AND (( orderS.orderDate BETWEEN '2004-04-01' AND '2004-04-30') 
+OR (orderS.orderDate BETWEEN '2004-05-01' AND '2004-05-31'))
+ORDER BY country, customerName
+--Q5
+SELECT customers.customerNumber, customerName,CITY,STATE,COUNTRY
+,COUNT(distinct ORDERS.orderNumber) AS NumberOfOrders,
+sum(payments.amount) as TotalPaymentAmount
+FROM customers
+INNER JOIN payments ON customers.customerNUMBER=payments.customerNumber
+INNER JOIN ORDERS ON customers.customerNumber=orders.customerNumber
+WHERE state ='CA' OR STATE='NY'
+group by customers.customerNumber, customerName,CITY,STATE,COUNTRY
+ORDER BY STATE,customerName
+--Q6
+SELECT employeeNumber,lastName,firstName,COUNT(customerNumber)
+AS NumberOfCustomers
+FROM employees
+left JOIN customers
+ON employees.employeeNumber=customerS.salesRepEmployeeNumber
+where employees.jobTitle='sales rep'
+group by employeeNumber,lastName,firstName
+having COUNT(customerNumber) >= all (
+SELECT count (customerNumber)
+FROM employees
+left JOIN customers
+ON employees.employeeNumber=customerS.salesRepEmployeeNumber
+where employees.jobTitle='sales rep'
+group by employeeNumber,lastName,firstName
+)
+union
+SELECT employeeNumber,lastName,firstName,COUNT(customerNumber)
+AS NumberOfCustomers
+FROM employees
+left JOIN customers
+ON employees.employeeNumber=customerS.salesRepEmployeeNumber
+where employees.jobTitle='sales rep'
+group by employeeNumber,lastName,firstName
+having COUNT(customerNumber) <= all (
+SELECT count (customerNumber)
+FROM employees
+left JOIN customers
+ON employees.employeeNumber=customerS.salesRepEmployeeNumber
+where employees.jobTitle='sales rep'
+group by employeeNumber,lastName,firstName
+)
+--Q7
+SELECT A.* FROM
+(SELECT offices.officeCode,offices.city,offices.state,
+offices.country,employees.employeeNumber,employees.lastName,employees.firstName,
+employees.jobTitle,COUNT(customers.customerNumber) AS
+NumberOfCustomers
+FROM offices
+INNER JOIN employees ON offices.officeCode=employees.officeCode
+LEFT JOIN customers ON employees.employeeNumber=customers.salesRepEmployeeNumber
+WHERE employees.jobTitle='SALES REP'
+GROUP BY offices.officeCode,offices.city,offices.state,
+offices.country,employees.employeeNumber,employees.lastName,employees.firstName,
+employees.jobTitle) AS A
+JOIN
+(SELECT A1.officeCode,MIN(A1.NumberOfCustomers) AS A4
+FROM
+(SELECT offices.officeCode,employees.employeeNumber
+,COUNT(customers.customerNumber) AS NumberOfCustomers
+FROM offices
+INNER JOIN employees ON offices.officeCode=employees.officeCode
+LEFT JOIN customers ON employees.employeeNumber=customers.salesRepEmployeeNumber
+WHERE employees.jobTitle='SALES REP'
+GROUP BY offices.officeCode,employees.employeeNumber) AS A1
+GROUP BY A1.officeCode) A2
+ON A.officeCode=A2.officeCode AND A2.A4=A.NumberOfCustomers
+ORDER BY A.officeCode
+
+--Q8
+CREATE PROCEDURE PROC1
+    @CUSTOMERNUMBER INT,
+    @NUMBEROFORDERS INT OUTPUT
+AS
+BEGIN
+    SET @NUMBEROFORDERS = (
+        SELECT COUNT(orders.orderNumber) AS NumberOfOrders
+        FROM orders
+        WHERE customerNumber = @CUSTOMERNUMBER
+    )
+END
+DECLARE @X INT
+EXECUTE PROC1 114, @X OUTPUT
+SELECT @X AS NUMBEROFORDERS
+--Q9
+CREATE TRIGGER TR1
+ON ORDERDETAILS
+AFTER DELETE
+AS
+BEGIN
+SELECT A.productCode,products.productName,A.orderNumber,
+ORDERS.orderDate,A.quantityOrdered,A.priceEach
+FROM deleted AS A
+INNER JOIN products ON A.productCode=products.productCode
+INNER JOIN orders ON A.orderNumber = orders.orderNumber
+END
+DELETE FROM orderdetails WHERE orderNumber=10100
+--Q10
+INSERT INTO orders(orderNumber,orderDate,requiredDate,shippedDate,status,customerNumber)
+VALUES(10900,'2022-08-12','2022-08-17','2022-08-16','SHIPPED',450)

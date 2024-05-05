@@ -1,0 +1,164 @@
+--Q1
+create database d1
+create table Staffss(
+StaffID int primary key,
+Name nvarchar(100)
+)
+create table Loginss(
+username nvarchar(50) primary key,
+Password nvarchar(255),
+Role nvarchar(100),
+StaffID int,
+ FOREIGN KEY (StaffID) REFERENCES Staffss(StaffID)
+)
+create table Reports(
+ReportNumber int primary key,
+Date date,
+issueReturn nvarchar(200)
+)
+create table Creates(
+userName nvarchar(50),
+ReportNumber int,
+FOREIGN KEY (username) REFERENCES loginSs(userName),
+FOREIGN KEY (ReportNumber) REFERENCES Reports(ReportNumber),
+primary key(userName ,ReportNumber))
+USE PE_DBI202_F2022
+--q2
+select StockItemID,StockItemName,SupplierID,Color
+from StockItems
+where color='blue'
+--q3
+select SupplierTransactionID,Suppliers.SupplierID,SupplierName,TransactionDate,
+TransactionAmount
+from Suppliers
+inner join SupplierTransactions
+on Suppliers.SupplierID=SupplierTransactions.SupplierID
+where TransactionDate between '2013-02-01' and '2013-02-15'
+--q4
+select StockItemID,StockItemName,Suppliers.SupplierID,
+SupplierName,OuterPackageID,PackageTypeName,UnitPrice
+from StockItems
+join Suppliers on StockItems.SupplierID=Suppliers.SupplierID
+join PackageTypes on StockItems.OuterPackageID=PackageTypes.PackageTypeID
+where StockItemID >= 135
+order by PackageTypeName , StockItemName
+ --q5
+ select Suppliers.SupplierID,SupplierName,count(PurchaseOrderID) as NumberOfPurchaseOrder
+ from Suppliers
+ left join PurchaseOrders on Suppliers.SupplierID=PurchaseOrders.SupplierID
+ group by Suppliers.SupplierID,SupplierName
+ order by count(PurchaseOrderID) desc, SupplierName
+ --q6
+ select UnitPackageID, PackageTypeName,count(StockItemID) as NumberOfStockItems
+ from StockItems
+ inner join PackageTypes on StockItems.UnitPackageID=PackageTypes.PackageTypeID
+  group by UnitPackageID, PackageTypeName
+HAVING COUNT(StockItemID) = (
+  SELECT MIN(cnt)
+  FROM (
+    SELECT COUNT(StockItemID) AS cnt
+    FROM StockItems
+    GROUP BY UnitPackageID
+  ) subquery
+);
+select UnitPackageID, PackageTypeName,count(StockItemID) as NumberOfStockItems
+ from StockItems
+ inner join PackageTypes on StockItems.UnitPackageID=PackageTypes.PackageTypeID
+  group by UnitPackageID, PackageTypeName
+  having count(StockItemID) <=all
+  (
+	 select count(StockItemID)
+	 from StockItems
+	 inner join PackageTypes on StockItems.UnitPackageID=PackageTypes.PackageTypeID
+	 group by UnitPackageID, PackageTypeName
+  )
+
+--Q7
+SELECT 
+    UnitPackage.PackageTypeID,
+    UnitPackage.PackageTypeName,
+    UnitPackage.NumberOfStockName_UnitPackage,
+    OuterPackage.NumberOfStockName_OuterPackage
+FROM
+    (SELECT
+        PackageTypes.PackageTypeID,
+        PackageTypes.PackageTypeName,
+        COUNT(StockItems.UnitPackageID) AS NumberOfStockName_UnitPackage
+    FROM
+        StockItems
+    RIGHT JOIN
+        PackageTypes ON StockItems.UnitPackageID = PackageTypes.PackageTypeID
+    WHERE
+        PackageTypeName IN ('each', 'carton', 'packet', 'pair', 'bag', 'box')
+    GROUP BY
+        PackageTypes.PackageTypeID,
+        PackageTypes.PackageTypeName) AS UnitPackage
+INNER JOIN
+    (SELECT
+        PackageTypes.PackageTypeID,
+        PackageTypes.PackageTypeName,
+        COUNT(StockItems.OuterPackageID) AS NumberOfStockName_OuterPackage
+    FROM
+        StockItems
+    RIGHT JOIN
+        PackageTypes ON StockItems.OuterPackageID = PackageTypes.PackageTypeID
+    WHERE
+        PackageTypeName IN ('each', 'carton', 'packet', 'pair', 'bag', 'box')
+    GROUP BY
+        PackageTypes.PackageTypeID,
+        PackageTypes.PackageTypeName) AS OuterPackage
+ON
+    UnitPackage.PackageTypeID = OuterPackage.PackageTypeID
+    AND UnitPackage.PackageTypeName = OuterPackage.PackageTypeName
+order by OuterPackage.NumberOfStockName_OuterPackage desc,  UnitPackage.PackageTypeName
+--Q8
+create procedure proc4
+@stockItemID int ,
+@OrderYear int,
+@numberOfPurchaseOrders int output
+as
+begin
+set @numberOfPurchaseOrders = 
+(select count(PurchaseOrders.PurchaseOrderID) as NumberOfPurchaseOrders
+from StockItems
+inner join PurchaseOrderLines on StockItems.StockItemID=PurchaseOrderLines.StockItemID
+inner join PurchaseOrders on PurchaseOrderLines.PurchaseOrderID=PurchaseOrders.PurchaseOrderID
+where StockItems.StockItemID = @stockItemID and
+year(PurchaseOrders.OrderDate)=@OrderYear
+)
+end
+--Q9
+create trigger tr4 on stockitems
+after insert
+as 
+begin
+ SELECT
+		cuong.StockItemID,
+		cuong.StockItemName,
+		cuong.OuterPackageID,
+		PackageTypes.PackageTypeName,
+		cuong.UnitPrice,
+		cuong.TaxRate
+    FROM
+        inserted AS cuong
+    INNER JOIN
+        PackageTypes on cuong.OuterPackageID = PackageTypes.PackageTypeID
+END
+--Q10
+-- chọn ra những thằng PackageTypeID mà có liên kết với UnitPage
+DELETE FROM PackageTypes
+WHERE PackageTypeID IN (
+    SELECT PackageTypeID
+    FROM PackageTypes
+    EXCEPT
+    (
+        SELECT DISTINCT PackageTypeID
+        FROM PackageTypes
+        INNER JOIN StockItems ON PackageTypes.PackageTypeID = StockItems.UnitPackageID
+        UNION
+        SELECT DISTINCT PackageTypeID
+        FROM PackageTypes
+        INNER JOIN StockItems ON PackageTypes.PackageTypeID = StockItems.OuterPackageID
+    )
+);
+

@@ -1,0 +1,90 @@
+--Q2
+SELECT employee_id,first_name,last_name
+FROM employees
+WHERE employee_id < 105
+--Q3
+SELECT locations.location_id,street_address,departments.department_name,
+locations.city
+FROM locations
+LEFT JOIN departments ON locations.location_id=departments.location_id
+WHERE department_name='IT' OR department_name='marketing'
+order by locations.location_id
+--Q4
+SELECT employees.first_name+','+employees.last_name AS full_name,
+JOBS.job_title,department_name,salary
+FROM employees
+INNER JOIN jobs ON employees.job_id=joBS.job_id
+INNER JOIN departments ON employees.department_id=departments.department_id
+WHERE salary>7000
+AND JOBS.job_id=16
+SELECT * FROM employees
+--Q5
+SELECT departments.department_id,department_name,MAX(salary) AS
+'MAX(salary)'
+FROM departments
+INNER JOIN employees ON departments.department_id=employees.department_id
+GROUP BY departments.department_id,department_name
+ORDER BY MAX(salary) DESC
+--Q6
+SELECT DISTINCT TOP 5 E1.first_name, E1.last_name
+FROM employees E1
+INNER JOIN employees E2 ON E1.employee_id=E2.manager_id
+ORDER BY E1.first_name
+--Q7
+SELECT countries.country_id,country_name,COUNT(employees.employee_id) AS
+NumberOfEmployees
+FROM countries
+left JOIN locations ON countries.country_id=locations.country_id
+left JOIN departments ON locations.location_id=departments.location_id
+left JOIN employees ON departments.department_id=employees.department_id
+group by countries.country_id,country_name
+having COUNT(employees.employee_id) > 2
+--Q8
+CREATE TRIGGER Salary_Not_Decrease
+ON employees
+for UPDATE
+AS
+BEGIN
+IF UPDATE(salary)
+BEGIN
+IF EXISTS (
+SELECT *
+FROM inserted i
+INNER JOIN deleted d ON i.employee_id = d.employee_id
+WHERE i.salary < d.salary
+)
+BEGIN
+ROLLBACK
+RETURN
+END
+UPDATE employees
+SET salary = i.salary
+FROM inserted i
+WHERE employees.employee_id = i.employee_id;
+END
+END
+--Q9
+DROP PROCEDURE GET_MANAGER_ID
+CREATE PROCEDURE GET_MANAGER_ID
+@EMP INT,
+@MAN INT OUTPUT
+AS 
+BEGIN
+SET @MAN =(
+SELECT  E1.manager_id
+FROM employees E1
+WHERE E1.employee_id = @EMP)
+END
+
+DECLARE @X INT;
+DECLARE @IN INT = 110;
+EXECUTE GET_MANAGER_ID @IN ,@X OUTPUT;
+SELECT @X AS MANAGERID
+
+--Q10
+DELETE FROM dependents
+WHERE employee_id IN (
+    SELECT employee_id
+    FROM employees
+    WHERE first_name = 'KAREN'
+)

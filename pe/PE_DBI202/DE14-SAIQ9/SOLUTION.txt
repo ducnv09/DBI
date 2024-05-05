@@ -1,0 +1,104 @@
+USE PE_DBI202_SU23
+--Q2
+SELECT LOCATIONS.location_id,departments.department_id,
+department_name
+FROM LOCATIONS
+LEFT JOIN departments
+ON locations.location_id=departments.location_id
+WHERE LOCATIONS.location_id>2400
+ORDER BY LOCATIONS.LOCATION_ID DESC
+---Q3
+SELECT location_id,country_id,street_address,city
+FROM locations
+WHERE country_id='US' or country_id='CA'
+ORDER BY location_id DESC
+--Q4 
+SELECT employee_id,first_name+' '+last_name AS
+full_name,jobs.job_title,phone_number
+FROM employees
+inner join jobs on employees.job_id=jobs.job_id
+where job_title = 'Programmer'
+and phone_number like'590.%'
+order by phone_number
+--Q5
+SELECT departments.department_id,department_name,MIN(employees.salary)
+AS 'MIN(salary)'
+FROM departments 
+LEFT JOIN employees ON departments.department_id=employees.department_id
+group by departments.department_id,department_name
+order by 'MIN(salary)'
+--Q6
+SELECT DISTINCT TOP 10 E2.first_name,E2.last_name
+FROM employees E1
+INNER JOIN employees E2 ON E1.employee_id=E2.manager_id
+WHERE E1.manager_id IS NOT NULL
+ORDER BY last_name
+--Q7
+SELECT countries.country_id,country_name,
+COUNT(employees.employee_id) AS numberofemployees
+FROM countries
+INNER JOIN locations ON countries.country_id=locations.country_id
+INNER JOIN departments ON locations.location_id=departments.location_id
+INNER JOIN employees ON departments.department_id=employees.department_id
+group by countries.country_id,country_name
+having COUNT(employees.employee_id) >= 2
+order by numberofemployees desc
+--Q8
+CREATE TRIGGER Salary_Not_Decrease1
+ON employees
+for UPDATE
+AS
+BEGIN
+IF UPDATE(salary)
+BEGIN
+IF EXISTS (
+SELECT *
+FROM inserted i
+INNER JOIN deleted d ON i.employee_id = d.employee_id
+INNER JOIN jobs ON i.job_id=JOBS.job_id
+WHERE I.salary > JOBS.max_salary 
+OR I.salary<JOBS.min_salary
+)
+BEGIN
+ROLLBACK
+RETURN
+END
+UPDATE employees
+SET salary = i.salary
+FROM inserted i
+WHERE employees.employee_id = i.employee_id;
+END
+END
+
+UPDATE employees
+SET salary=50000
+WHERE employee_id=102
+SELECT * FROM employees WHERE employee_id=102
+--Q9
+drop function GET_MANAGERID
+CREATE FUNCTION GET_MANAGERID(@ID INT)
+RETURNS INT
+AS
+BEGIN
+    DECLARE @ManagerID INT;
+    
+    SELECT @ManagerID = employees.manager_id
+    FROM employees
+    WHERE employees.employee_id = @ID;
+    
+    RETURN @ManagerID;
+END;
+
+DECLARE @ID INT=101;
+SELECT @ID AS EMPLOYEEID,
+dbo.GET_MANAGERID(@ID) AS MANAGERID
+--Q10
+DELETE FROM dependents
+WHERE employee_id IN(
+SELECT employee_id FROM
+employees WHERE first_name = 'ALEXANDER'
+)
+
+
+
+

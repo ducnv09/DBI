@@ -1,0 +1,70 @@
+use PE_Demo_S2019
+--Q2
+select * from Customer
+where Segment = 'consumer' 
+and city = 'arlington'
+--Q3
+select CustomerID,CustomerName,Segment,Country,
+City,State,PostalCode,Region
+from Customer
+inner join Orders on Customer.ID=orders.CustomerID
+where CustomerName like 'b%'
+and orders.OrderDate between '2017-12-01' and'2017-12-31'
+order by Segment desc, CustomerName
+--Q4
+select SubCategory.ID,SubCategory.SubCategoryName,
+count(Product.ID) as NumberOfProducts
+from SubCategory
+inner join Product on SubCategory.ID=Product.SubCategoryID
+group by SubCategory.ID,SubCategory.SubCategoryName
+having count(Product.ID) > 100
+order by NumberOfProducts desc
+--Q5
+select Product.ID,Product.ProductName,OrderDetails.Quantity
+from Product
+left join OrderDetails on Product.ID=OrderDetails.ProductID
+where OrderDetails.Quantity >= all
+(
+select OrderDetails.Quantity
+from Product
+inner join OrderDetails on Product.ID=OrderDetails.ProductID
+)
+--Q6
+select Customer.ID,CustomerName,count(orders.ID) as NumberOfOrders
+from Customer
+inner join Orders on customer.ID=orders.CustomerID
+group by Customer.ID,CustomerName
+having count(orders.ID) >= all
+(
+select count(orders.ID)
+from Customer
+inner join Orders on customer.ID=orders.CustomerID
+group by Customer.ID,CustomerName
+)
+--Q7
+select * from
+(select top (5) *
+from Product
+order by UnitPrice) as a1
+union 
+select * from
+(select top (5) *
+from Product
+order by UnitPrice desc) as a2
+order by UnitPrice DESC
+--Q8
+create procedure CountProduct2
+@OrderID nvarchar(255),
+@NbProducts int output
+as
+begin
+set @NbProducts=
+(select count(product.ID)
+from product
+inner join OrderDetails on Product.ID=OrderDetails.ProductID
+where OrderDetails.OrderID = @OrderID)
+end
+declare @t int
+exec CountProduct2 'CA-2014-100391', @t output 
+print @t
+

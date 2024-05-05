@@ -1,0 +1,121 @@
+--Q1
+USE DE8
+CREATE DATABASE DE8
+CREATE TABLE BRANCHES(
+BRANCHID INT PRIMARY KEY,
+NAME NVARCHAR(100),
+ADDRESS NVARCHAR(200)
+)
+CREATE TABLE VEHICLES(
+VEHICLEID INT PRIMARY KEY,
+MODEL NVARCHAR(50),
+MAKER VARCHAR(20),
+YEAR INT,
+REINTALPRICE FLOAT
+)
+CREATE TABLE CUSTOMERS(
+CUSTOMERID INT PRIMARY KEY,
+FULLNAME NVARCHAR(100),
+ADDRESS NVARCHAR(200)
+)
+CREATE TABLE RENT(
+DROPOFFDATE DATE,
+BRANCHID INT,
+VEHICLEID INT,
+CUSTOMERID INT,
+FOREIGN KEY (BRANCHID) REFERENCES BRANCHES(BRANCHID),
+FOREIGN KEY (VEHICLEID) REFERENCES VEHICLES(VEHICLEID),
+FOREIGN KEY (CUSTOMERID) REFERENCES CUSTOMERS(CUSTOMERID),
+PRIMARY KEY(BRANCHID,VEHICLEID ,CUSTOMERID)
+)
+use PE_DBI202_F2020
+--Q2
+SELECT * FROM ranking_criteria
+--Q3
+SELECT ranking_system_id,
+ranking_criteria.criteria_name
+FROM ranking_criteria
+where ranking_system_id = 1 or ranking_system_id=2
+order by ranking_system_id,ranking_criteria.criteria_name
+--Q4
+SELECT university.id,university.university_name,university_year.year,
+university_year.num_students,university_year.pct_international_students,
+university.country_id
+FROM university
+INNER JOIN university_year ON university.id=university_year.university_id
+WHERE pct_international_students > 30 AND university_year.year=2016
+ORDER BY university_name 
+--Q5
+SELECT ranking_system.id,ranking_system.system_name,
+COUNT(ranking_criteria.id) AS numberOfCriteria
+FROM ranking_system
+INNER JOIN ranking_criteria ON ranking_system.id=ranking_criteria.ranking_system_id
+GROUP BY ranking_system.id,ranking_system.system_name
+ORDER BY numberOfCriteria desc
+--Q6
+SELECT university.id,university.university_name,university_year.year,
+university_year.student_staff_ratio,university_year.student_staff_ratio
+FROM university
+INNER JOIN university_year ON university.id=university_year.university_id
+WHERE YEAR=2015 AND
+ university_year.student_staff_ratio <= ALL 
+(SELECT university_year.student_staff_ratio
+FROM university
+INNER JOIN university_year ON university.id=university_year.university_id
+)
+--Q7
+select university.id,university.university_name,university_ranking_year.ranking_criteria_id,
+ranking_criteria.criteria_name,university_ranking_year.year,university_ranking_year.score
+from university
+inner join university_ranking_year on university.id=university_ranking_year.university_id
+inner join ranking_criteria on university_ranking_year.ranking_criteria_id=ranking_criteria.id
+where university_ranking_year.year=2016 and 
+ranking_criteria.criteria_name='Teaching' 
+ AND EXISTS (
+    SELECT 1
+    FROM university_ranking_year ur2
+    WHERE ur2.year = 2016
+      AND ur2.ranking_criteria_id = university_ranking_year.ranking_criteria_id
+      AND ur2.score = university_ranking_year.score
+      AND ur2.university_id <> university_ranking_year.university_id
+  )
+order by score desc
+
+
+--Q8
+CREATE PROCEDURE proc_university_year3
+@year int,
+@pct_international_students int,
+@nbUniversity int output
+as
+begin
+set @nbUniversity =
+(	
+	select count(university.id) from university
+	inner join university_year on university.id=university_year.university_id
+	where  year = @year and university_year.pct_international_students > @pct_international_students
+	
+)
+end
+
+declare @out int
+exec proc_university_year3 2011,30, @out output
+select @out as NumberOfUniversities
+--Q9
+CREATE TRIGGER TR_INSERT_UNIVERSITY_RANKING
+ON UNIVERSITY_RANKING_YEAR
+AFTER INSERT
+AS 
+BEGIN
+SELECT A.university_id,university.university_name,A.ranking_criteria_id,
+ranking_criteria.criteria_name,A.year,A.score
+FROM INSERTED AS A
+INNER JOIN university ON A.university_id=university.id
+INNER JOIN ranking_criteria ON A.ranking_criteria_id=ranking_criteria.id
+END
+--q10
+INSERT INTO ranking_system(ID,system_name)
+VALUES(4,'QS WORLD UNIVERSITY RANKINGS')
+INSERT INTO ranking_criteria(ID,criteria_name)
+VALUES(22,'Academic Reputation'),
+(23,'Citations per faculty')

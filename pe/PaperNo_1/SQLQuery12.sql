@@ -1,0 +1,1 @@
+insert into film(film_id,title,language_id) values('1004','ACADEMY DINOSAUR','1')

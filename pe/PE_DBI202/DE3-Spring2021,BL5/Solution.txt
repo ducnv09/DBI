@@ -1,0 +1,115 @@
+--Q1
+CREATE DATABASE DE3
+CREATE TABLE ITEMS(
+ITEMID INT PRIMARY KEY,
+NAME NVARCHAR(255),
+PRICE FLOAT
+)
+CREATE TABLE ITEMVARIANTS(
+VARIANTID INT PRIMARY KEY,
+DETAIL NVARCHAR(200),
+SIZE NVARCHAR(30),
+COLOR NVARCHAR(50),
+ITEMID INT,
+FOREIGN KEY (ITEMID) REFERENCES ITEMS(ITEMID)
+)
+CREATE TABLE CATEGORIESS(
+CATID INT PRIMARY KEY,
+NAME NVARCHAR(255)
+)
+CREATE TABLE BELONGTO(
+ITEMID INT,
+CATID INT,
+FOREIGN KEY (ITEMID) REFERENCES ITEMS(ITEMID),
+FOREIGN KEY (CATID) REFERENCES CATEGORIESS(CATID),
+PRIMARY KEY(ITEMID,CATID)
+)
+USE [PE_DBI202_Sp2021_B5]
+--Q2
+select *
+from Employees
+where Salary > 9000
+--Q3
+select Jobs.JobID, Jobs.JobTitle,min_salary
+from Jobs
+where min_salary > 5000 and JobTitle like'%manager%'
+order by min_salary desc, Jobs.JobTitle
+--Q4
+select EmployeeID,FirstName,lastname,Salary,DepartmentName,StateProvince,
+CountryID
+from Employees
+inner join Departments on Employees.DepartmentID=Departments.DepartmentID
+inner join locations on Departments.LocationID=Locations.LocationID
+where salary > 3000 and StateProvince = 'Washington' and
+CountryID='US'
+--Q5
+select Locations.LocationID,StreetAddress,City,StateProvince,
+CountryID,count(DepartmentID) as NumberOfDepartments
+from Locations
+left join Departments on Locations.LocationID=Departments.LocationID
+group by Locations.LocationID,StreetAddress,City,StateProvince,
+CountryID
+order by NumberOfDepartments desc,Locations.LocationID
+--Q6
+select jobs.JobID,JobTitle,count(EmployeeID) as NumberOfEmployees
+from jobs
+inner join Employees on Employees.JobID=Jobs.JobID
+group by jobs.JobID,JobTitle
+having  count(EmployeeID) =(
+	select max(cnt)
+	from(
+	select count(EmployeeID) as cnt
+	from jobs
+	inner join Employees on Employees.JobID=Jobs.JobID
+	group by jobs.JobID,JobTitle
+	) subquery
+	);
+
+select jobs.JobID,JobTitle,count(EmployeeID) as NumberOfEmployees
+from jobs
+inner join Employees on Employees.JobID=Jobs.JobID
+group by jobs.JobID,JobTitle
+having  count(EmployeeID) >= all
+(
+	select count(EmployeeID)
+	from jobs
+	inner join Employees on Employees.JobID=Jobs.JobID
+	group by jobs.JobID,JobTitle
+)
+--Q7
+SELECT emps1.EmployeeID,
+COUNT(emps2.EmployeeID) FROM (
+SELECT EmployeeID FROM Employees ts
+WHERE Salary > 10000 OR EXISTS (
+        SELECT 1
+        FROM Employees e3
+        WHERE e3.ManagerID = ts.EmployeeID
+    )) as emps1 
+left join
+Employees mngs on emps1.EmployeeID = mngs.ManagerID
+left join 
+Employees emps2 ON mngs.ManagerID = emps2.EmployeeID
+GROUP BY  emps1.EmployeeID, mngs.ManagerID
+--Q8
+create procedure pr2
+@country varchar(10),
+@numberOfDepartments int output
+as
+begin 
+set @numberOfDepartments =
+(select count(Departments.DepartmentID) as NumberOfDepartments
+from Locations
+inner join Departments on locations.LocationID=Departments.LocationID
+where Locations.CountryID=@country)
+end
+--Q9
+CREATE TRIGGER TR1
+ON EMPLOYEES
+AFTER INSERT
+AS 
+BEGIN
+SELECT
+A.EmployeeID,A.FirstName,A.LastName,A.DepartmentID,Departments.DepartmentName
+FROM inserted AS A
+LEFT JOIN Departments ON A.DepartmentID=Departments.DepartmentID
+END
